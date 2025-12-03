@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>KFC Printer v22 (All Left Align)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        /* --- ИНТЕРФЕЙС --- */
+        :root { --bg: #09090b; --panel: #18181b; --border: #27272a; --accent: #e11d48; --text: #ffffff; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .app { display: flex; width: 1000px; height: 680px; background: var(--panel); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden; }
+        .controls { width: 380px; padding: 30px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 15px; background: #18181b; overflow-y: auto; }
+        .header { display: flex; gap: 10px; align-items: center; margin-bottom: 5px; }
+        .logo { width: 40px; height: 40px; background: #e11d48; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        
+        .tabs { display: flex; background: #27272a; padding: 4px; border-radius: 8px; margin-bottom: 10px; }
+        .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; color: #888; font-weight: 600; font-size: 13px; border-radius: 6px; transition: 0.2s; }
+        .tab.active { background: #e11d48; color: white; }
+
+        .cat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
+        .cat-btn { background: #222; border: 1px solid #333; color: #aaa; padding: 10px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; transition: 0.2s; }
+        .cat-btn:hover { background: #2a2a2a; color: white; }
+        .cat-btn.active { background: rgba(225, 29, 72, 0.15); border-color: #e11d48; color: #e11d48; }
+
+        label { font-size: 11px; text-transform: uppercase; color: #888; font-weight: 700; display: block; margin-bottom: 5px; }
+        input, select { width: 100%; background: #222; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; outline: none; box-sizing: border-box; }
+        input:focus, select:focus { border-color: #e11d48; }
+        
+        .btn { margin-top: auto; background: white; color: black; border: none; padding: 16px; border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 16px; display: flex; justify-content: center; gap: 10px; align-items: center; }
+        .btn:hover { background: #ddd; }
+        
+        .preview { flex: 1; background: radial-gradient(circle, #222 0%, #000 100%); display: flex; align-items: center; justify-content: center; position: relative; flex-direction: column; }
+        .preview-lbl { margin-bottom: 20px; color: #444; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 12px; }
+        
+        .screen-preview-box { 
+            transform: scale(4); 
+            transform-origin: center; 
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            outline: 1px dashed #555; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app">
+        <div class="controls">
+            <div class="header">
+                <div class="logo">K</div>
+                <div><b>KFC Printer</b><br><small style="color:#666">v 22.0 (Bread Left)</small></div>
+            </div>
+
+            <div>
+                <label>Режим</label>
+                <div class="tabs">
+                    <div class="tab active" onclick="setMode('start')" id="btnStart">Начало</div>
+                    <div class="tab" onclick="setMode('end')" id="btnEnd">Готово</div>
+                </div>
+            </div>
+
+            <div>
+                <label>Категория</label>
+                <div class="cat-grid">
+                    <div class="cat-btn active" onclick="selectCategory('chicken', this)">
+                        <i class="fa-solid fa-drumstick-bite"></i> Курица
+                    </div>
+                    <div class="cat-btn" onclick="selectCategory('bread', this)">
+                        <i class="fa-solid fa-bread-slice"></i> Хлеб
+                    </div>
+                    <div class="cat-btn" onclick="selectCategory('dessert', this)">
+                        <i class="fa-solid fa-cookie"></i> Десерт
+                    </div>
+                </div>
+            </div>
+
+            <div id="divProduct">
+                <label>Продукт</label>
+                <select id="inpProduct" onchange="updateShelfLife()">
+                </select>
+            </div>
+
+            <div>
+                <label id="lblTime" style="color: #e11d48;">Время</label>
+                <input type="datetime-local" id="inpDate" onchange="updatePreview()">
+            </div>
+
+            <div style="display:none;">
+                <input type="number" id="inpShelf" value="48">
+                <input type="number" id="inpThawHours" value="12">
+            </div>
+
+            <div>
+                <label>Копии</label>
+                <input type="number" id="inpCopies" value="1">
+            </div>
+
+            <button class="btn" onclick="printReal()">
+                <i class="fa-solid fa-print"></i> ПЕЧАТЬ
+            </button>
+        </div>
+
+        <div class="preview">
+            <div class="preview-lbl">Предпросмотр</div>
+            <div id="previewContainer" class="screen-preview-box"></div>
+            <div id="previewNote" style="margin-top:20px; color:#666; font-size:10px; display:none;">
+                Для десертов печатается 2 наклейки автоматически
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mode = 'start';
+        let currentCategoryName = 'chicken'; 
+        
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('inpDate').value = now.toISOString().slice(0, 16);
+
+        // === ДАННЫЕ ===
+        const menuData = {
+            "chicken": [
+                { name: "Крылья", shelf: 48, thaw: 24 },
+                { name: "Ножки OR", shelf: 48, thaw: 24 },
+                { name: "Ножки HS", shelf: 48, thaw: 24 },
+                { name: "Стрипсы OR", shelf: 48, thaw: 24 },
+                { name: "Стрипсы HS", shelf: 48, thaw: 24 },
+                { name: "Байтсы", shelf: 48, thaw: 24 },
+                { name: "Филе OR", shelf: 48, thaw: 24 },
+                { name: "Филе HS", shelf: 48, thaw: 24 }
+            ],
+            "bread": [
+                { name: "Булка Солнечный", shelf: 52, thaw: 6 },
+                { name: "Булка Импринт", shelf: 52, thaw: 6 },
+                { name: "Булка Бриошь", shelf: 52, thaw: 6 },
+                { name: "Булка Биг Бриошь", shelf: 52, thaw: 6 },
+                { name: "Булка Лонгер", shelf: 52, thaw: 4 },
+                { name: "Тортилья Пшеничная", shelf: 36, thaw: 4 },
+                { name: "Тортилья Мега Ролл", shelf: 36, thaw: 4 },
+                { name: "Тортилья Сырная", shelf: 36, thaw: 4 }
+            ],
+            "dessert": [
+                { name: "Шоколадный", shelf: 48, thaw: 1 },
+                { name: "Клубничный", shelf: 72, thaw: 1 },
+                { name: "Клюква", shelf: 72, thaw: 1 },
+                { name: "Манго", shelf: 72, thaw: 1 }
+            ]
+        };
+
+        // --- ВЫБОР КАТЕГОРИИ ---
+        function selectCategory(catName, btnElement) {
+            currentCategoryName = catName;
+            
+            document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            const selectEl = document.getElementById('inpProduct');
+            selectEl.innerHTML = ''; 
+
+            menuData[catName].forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.name;
+                option.text = item.name.replace('Булка ', '').replace('Тортилья ', 'Торт. ');
+                option.dataset.shelf = item.shelf;
+                option.dataset.thaw = item.thaw;
+                selectEl.appendChild(option);
+            });
+            
+            document.getElementById('previewNote').style.display = (catName === 'dessert') ? 'block' : 'none';
+            updateShelfLife();
+        }
+
+        function updateShelfLife() {
+            const selectEl = document.getElementById('inpProduct');
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            if (selectedOption) {
+                document.getElementById('inpShelf').value = selectedOption.dataset.shelf;
+                document.getElementById('inpThawHours').value = selectedOption.dataset.thaw;
+            }
+            updatePreview();
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('btnStart').className = mode === 'start' ? 'tab active' : 'tab';
+            document.getElementById('btnEnd').className = mode === 'end' ? 'tab active' : 'tab';
+            
+            if (mode === 'start') {
+                document.getElementById('lblTime').innerText = "Текущее время (Закладка)";
+                document.getElementById('lblTime').style.color = "#888";
+                const n = new Date();
+                n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+                document.getElementById('inpDate').value = n.toISOString().slice(0, 16);
+            } else {
+                document.getElementById('lblTime').innerText = "ВРЕМЯ ЗАКЛАДКИ (С этикетки 1)";
+                document.getElementById('lblTime').style.color = "#e11d48";
+            }
+            updatePreview();
+        }
+
+        // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+        function getDates() {
+            const dateStr = document.getElementById('inpDate').value;
+            const totalHours = parseInt(document.getElementById('inpShelf').value);
+            const thawHours = parseInt(document.getElementById('inpThawHours').value);
+            
+            const dateStart = new Date(dateStr);
+            const dateThawed = new Date(dateStart.getTime() + (thawHours * 60 * 60 * 1000));
+            const dateExp = new Date(dateStart.getTime() + (totalHours * 60 * 60 * 1000));
+
+            const day = (d) => d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit' });
+            const time = (d) => d.toLocaleString('ru-RU', { hour: '2-digit', minute:'2-digit' });
+
+            return { dateStart, dateThawed, dateExp, day, time };
+        }
+
+        function getProductName() {
+            let printName = document.getElementById('inpProduct').value;
+            if (printName.includes("Булка")) printName = printName.replace("Булка ", "");
+            if (printName.includes("Тортилья")) printName = printName.replace("Тортилья ", "Торт. ");
+            if (printName.includes("Пирожок")) printName = printName.replace("Пирожок ", "Пир. ");
+            return printName;
+        }
+
+        // --- ГЕНЕРАТОР HTML ЭТИКЕТКИ ---
+        function getLabelHTML(isForPrint, specificType = null) {
+            const { dateStart, dateThawed, dateExp, day, time } = getDates();
+            const printName = getProductName();
+            const shiftStyle = isForPrint ? "position: relative; left: -0,5mm;" : "";
+
+            const styleBase = `
+                width: 30mm; height: 20mm; 
+                box-sizing: border-box; overflow: hidden;
+                font-family: 'Roboto', Arial, sans-serif; 
+                color: black; background: white;
+                border: none; 
+                display: flex; flex-direction: column;
+                margin: 0; padding: 0;
+                ${shiftStyle}
+            `;
+
+            // === ДЕСЕРТЫ (Пара) ===
+            if (specificType === 'dessert_1') {
+                return `
+                <div style="${styleBase}">
+                    <div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900; border-bottom:2px solid black; text-align:center; line-height:1; padding:0 2px;">
+                        ${printName}
+                    </div>
+                    <div style="height:5mm; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; border-bottom:2px solid black;">
+                        начало разморозки
+                    </div>
+                    <div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900;">
+                        ${day(dateStart)} - ${time(dateStart)}
+                    </div>
+                </div>`;
+            }
+
+            if (specificType === 'dessert_2') {
+                return `
+                <div style="${styleBase}">
+                    <div style="height:50%; display:flex; border-bottom:2px solid black;">
+                        <div style="width:35%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; border-right:2px solid black;">
+                            готово
+                        </div>
+                        <div style="width:65%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900;">
+                            ${day(dateThawed)} - ${time(dateThawed)}
+                        </div>
+                    </div>
+                    <div style="height:50%; display:flex;">
+                         <div style="width:35%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; border-right:2px solid black;">
+                            срок
+                        </div>
+                        <div style="width:65%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900;">
+                            ${day(dateExp)} - ${time(dateExp)}
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            // === ОБЫЧНЫЙ РЕЖИМ (Старт / Енд) ===
+            if (mode === 'start') {
+                return `
+                <div style="${styleBase}">
+                    <div style="flex:1.2; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:900; border-bottom:2px solid black; text-align:center; line-height:1; padding:0 2px;">
+                        ${printName}
+                    </div>
+                    <div style="height:5mm; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; border-bottom:2px solid black;">
+                        начало разморозки
+                    </div>
+                    <div style="flex:1; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900;">
+                        ${day(dateStart)} - ${time(dateStart)}
+                    </div>
+                </div>`;
+            } else {
+                if (currentCategoryName === 'bread') {
+                    // ХЛЕБ (ТУТ ИЗМЕНЕНИЕ: ВНИЗУ + СЛЕВА)
+                    return `
+                    <div style="${styleBase}">
+                        <div style="height:33.3%; display:flex; border-bottom:2px solid black;">
+                            <div style="width:35%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; border-right:2px solid black;">
+                                готово
+                            </div>
+                            <div style="width:65%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900;">
+                                ${day(dateThawed)} - ${time(dateThawed)}
+                            </div>
+                        </div>
+                        <div style="height:33.3%; display:flex; border-bottom:2px solid black;">
+                             <div style="width:35%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; border-right:2px solid black;">
+                                срок
+                            </div>
+                            <div style="width:65%; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:900;">
+                                ${day(dateExp)} - ${time(dateExp)}
+                            </div>
+                        </div>
+                        <div style="height:33.4%; display:flex;">
+                             <div style="width:35%; display:flex; align-items:center; justify-content:flex-start; padding-left:2px; font-size:24px; font-weight:900; color: #8b5cf6; border-right:2px solid black;">
+                                +
+                            </div>
+                            <div style="width:65%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900;">
+                                ${printName}
+                            </div>
+                        </div>
+                    </div>`;
+                } else {
+                    // КУРИЦА
+                    return `
+                    <div style="${styleBase}">
+                        <div style="height:25%; display:flex; border-bottom:2px solid black;">
+                            <div style="width:25%; display:flex; align-items:center; justify-content:center; font-size:7px; font-weight:700; border-right:2px solid black;">
+                                готово
+                            </div>
+                            <div style="width:75%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900;">
+                                ${day(dateThawed)} - ${time(dateThawed)}
+                            </div>
+                        </div>
+                        <div style="height:75%; display:flex;">
+                            <div style="width:25%; display:flex; flex-direction:column; border-right:2px solid black;">
+                                <div style="height:50%; display:flex; align-items:center; justify-content:flex-start; padding-left:2px; font-size:9px; font-weight:900; border-bottom:2px solid black;">
+                                    срок
+                                </div>
+                                <div style="height:50%; display:flex; align-items:center; justify-content:flex-start; padding-left:2px; font-size:20px; font-weight:900;">
+                                    +
+                                </div>
+                            </div>
+                            <div style="width:75%; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1;">
+                                <div style="font-size:20px; font-weight:900; letter-spacing:-0.5px; margin-bottom:2px;">
+                                    ${day(dateExp)}
+                                </div>
+                                <div style="font-size:19px; font-weight:900;">
+                                    ${time(dateExp)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            }
+        }
+
+        function updatePreview() {
+            let html = getLabelHTML(false);
+            html = html.replace('left: -2mm;', ''); 
+            document.getElementById('previewContainer').innerHTML = html;
+        }
+
+        function printReal() {
+            const copies = document.getElementById('inpCopies').value;
+            let allLabels = "";
+
+            if (currentCategoryName === 'dessert') {
+                const label1 = getLabelHTML(true, 'dessert_1');
+                const label2 = getLabelHTML(true, 'dessert_2');
+
+                for(let i=0; i<copies; i++) {
+                    allLabels += `<div style="break-after: page; page-break-after: always;">${label1}</div>`;
+                    allLabels += `<div style="break-after: page; page-break-after: always;">${label2}</div>`;
+                }
+            } else {
+                const labelHTML = getLabelHTML(true);
+                for(let i=0; i<copies; i++) {
+                    allLabels += `<div style="break-after: page; page-break-after: always;">${labelHTML}</div>`;
+                }
+            }
+
+            const win = window.open('', '', 'width=400,height=400');
+            win.document.write(`<html><head><style>@page { size: 30mm 20mm; margin: 0; } body { margin: 0; padding: 0; }</style></head><body>${allLabels}<script>window.onload=function(){window.print();window.close();}<\/script></body></html>`);
+            win.document.close();
+        }
+
+        selectCategory('chicken', document.querySelector('.cat-btn'));
+    </script>
+</body>
+</html>
